@@ -86,6 +86,7 @@ input[type=range]{padding:0;accent-color:var(--acc)}
 #zoom{position:absolute;right:12px;bottom:14px;display:flex;flex-direction:column;gap:6px;z-index:3}
 #zoom button{width:44px;height:44px;border-radius:12px;border:1px solid #d8d5cc;background:#fff;color:#222;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,.08)}
 #zoom svg{width:22px;height:22px}
+#zoom button.on{background:#0e7490;color:#fff;border-color:#0e7490}
 #empty{position:absolute;inset:0;display:none;align-items:center;justify-content:center;pointer-events:none;z-index:2}
 #empty.on{display:flex}
 #empty .card{pointer-events:auto;background:#fff;border:1px solid #e4e0d6;border-radius:18px;padding:22px;max-width:420px;color:#1f2733;box-shadow:0 10px 40px rgba(0,0,0,.08);text-align:center}
@@ -202,6 +203,7 @@ input[type=range]{padding:0;accent-color:var(--acc)}
     <div id="zoom">
       <button id="zIn" title="Vergrößern"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
       <button id="zOut" title="Verkleinern"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12h14"/></svg></button>
+      <button id="zGuide" title="Abstände & Hilfslinien an/aus"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 21 21 3"/><path d="M3 9V3h6M15 21h6v-6"/><circle cx="12" cy="12" r="2.2"/></svg></button>
       <button id="zFit" title="Alles zeigen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/></svg></button>
     </div>
   </main>
@@ -287,7 +289,7 @@ function pieceLen(t){t=String(t).toLowerCase();if(t.includes('kanal'))return 2;i
 const WALLC='#3b4049',ROOMF='#fffdf8',SYMC='#16264a',SELC='#ea580c';
 
 /* ================= Einstellungen ================= */
-const DEF={ghost:true,grid:.1,snap:true,angle:true,penOnly:false,penSeen:false,showLen:true,symSize:.4,reserve:10,lay:{bau:true,elektro:true,trasse:true},
+const DEF={guides:true,ghost:true,grid:.1,snap:true,angle:true,penOnly:false,penSeen:false,showLen:true,symSize:.4,reserve:10,lay:{bau:true,elektro:true,trasse:true},
  d:{room:{th:.24},wall:{th:.115},cable:{ctype:'NYM-J 3x1,5',inst:'UP',extra:0},tray:{ttype:'Kabelkanal 40x60',w:60,h:40,mh:''},sym:{kind:'steckdose'}}};
 let settings=clone(DEF);
 try{const s=JSON.parse(localStorage.getItem('tlp.settings')||'{}');settings=Object.assign(clone(DEF),s);settings.d=Object.assign(clone(DEF.d),s.d||{});settings.lay=Object.assign(clone(DEF.lay),s.lay||{})}catch(e){}
@@ -310,7 +312,7 @@ function ensureFloors(p){if(!p.floors||!p.floors.length)p.floors=[{id:'f1',name:
 const floorName=id=>{const f=plan.floors.find(f=>f.id===id);return f?f.name:''};
 function ghostFl(){if(!settings.ghost)return null;const i=plan.floors.findIndex(f=>f.id===plan.curFl);return i>0?plan.floors[i-1].id:null}
 let plan=newPlan();
-let hiKey=null,tool='sel',sel=null,draft=null,cursor=null,snapInfo=null,placePrev=null,calib=null,panelHidden=false;
+let guideInfo=null,hiKey=null,tool='sel',sel=null,draft=null,cursor=null,snapInfo=null,placePrev=null,calib=null,panelHidden=false;
 const view={s:60,ox:200,oy:150};
 let W=800,H=600,labelHits=[];
 const hist={u:[],r:[]};let lastSnap='[]';
@@ -523,6 +525,18 @@ function renderSVG(v,o){
   if(cursor&&draft.pts.length){const q=P(cursor),L=dist(draft.pts[draft.pts.length-1],cursor);out.push(`<g><rect x="${(q[0]-38).toFixed(1)}" y="${(q[1]-62).toFixed(1)}" width="76" height="26" rx="13" fill="#161b22"/>${lbl(q[0],q[1]-49,fmt(L)+' m',{fs:13,c:'#fff',w:800}).replace('class="lb"','')}</g>`)}}
  if(calib&&calib.pts.length){const a=P(calib.pts[0]),b=cursor?P(cursor):a;out.push(`<path d="M${a[0]} ${a[1]}L${b[0]} ${b[1]}" stroke="#dc2626" stroke-width="3" stroke-dasharray="8 5"/><circle cx="${a[0]}" cy="${a[1]}" r="6" fill="#dc2626"/>`)}
  if(placePrev&&tool==='sym'){out.push(symG(Object.assign({kind:settings.d.sym.kind},placePrev),v,' ghost'))}
+ if(settings.guides){const T=tool==='sym'&&placePrev?Object.assign({kind:settings.d.sym.kind,id:null},placePrev):(selIt&&selIt.t==='sym'&&!isOpening(selIt.kind)?selIt:null);
+  if(T&&!isOpening(T.kind)){const GC='#0e7490',pc=P([T.x,T.y]);
+   for(const D of symDists(T)){const a=P([T.x+D.d[0]*(symR(T)+.02),T.y+D.d[1]*(symR(T)+.02)]),b=P(D.hit),pp=[-D.d[1],D.d[0]];
+    out.push(`<path d="M${a[0].toFixed(1)} ${a[1].toFixed(1)}L${b[0].toFixed(1)} ${b[1].toFixed(1)}M${(b[0]-pp[0]*6).toFixed(1)} ${(b[1]-pp[1]*6).toFixed(1)}l${(pp[0]*12).toFixed(1)} ${(pp[1]*12).toFixed(1)}" stroke="${GC}" stroke-width="1.4" stroke-dasharray="5 3" fill="none"/>`);
+    if(dist(a,b)<26)continue;const mx=(a[0]+b[0])/2+pp[0]*11,my=(a[1]+b[1])/2+pp[1]*11,t=fmt(D.t);
+    out.push(`<rect x="${(mx-t.length*3.7-6).toFixed(1)}" y="${(my-10).toFixed(1)}" width="${(t.length*7.4+12).toFixed(1)}" height="20" rx="10" fill="${GC}"/>`+lbl(mx,my,t,{fs:12,c:'#fff',w:700}).replace('class="lb"',''));
+    if(T.id)labelHits.push({x:mx-t.length*3.7-10,y:my-14,w:t.length*7.4+20,h:28,id:T.id,i:D.i,kind:'wd'})}
+   if(guideInfo){const GG='#db2777';for(const[g,ax]of[[guideInfo.ax,'x'],[guideInfo.ay,'y']]){if(!g)continue;
+    if(g.k==='mid'){const A=ax==='x'?P([g.x,g.y0]):P([g.x0,g.y]),B=ax==='x'?P([g.x,g.y1]):P([g.x1,g.y]);out.push(`<path d="M${A[0].toFixed(1)} ${A[1].toFixed(1)}L${B[0].toFixed(1)} ${B[1].toFixed(1)}" stroke="${GG}" stroke-width="1.3" stroke-dasharray="8 4"/>`+lbl(ax==='x'?A[0]+4:A[0]+6,ax==='x'?A[1]+14:A[1]-10,'Raummitte',{fs:11,c:GG,a:'start',w:700}));continue}
+    const q=P([g.x,g.y]);const A=ax==='x'?[pc[0],Math.min(q[1],pc[1])-24]:[Math.min(q[0],pc[0])-24,pc[1]],B=ax==='x'?[pc[0],Math.max(q[1],pc[1])+24]:[Math.max(q[0],pc[0])+24,pc[1]];
+    out.push(`<path d="M${A[0].toFixed(1)} ${A[1].toFixed(1)}L${B[0].toFixed(1)} ${B[1].toFixed(1)}" stroke="${GG}" stroke-width="1.3" stroke-dasharray="8 4"/><circle cx="${q[0].toFixed(1)}" cy="${q[1].toFixed(1)}" r="4" fill="${GG}"/>`);
+    const dd=ax==='x'?Math.abs(g.y-T.y):Math.abs(g.x-T.x);if(dd>.05){const mx=ax==='x'?pc[0]+10:(q[0]+pc[0])/2,my=ax==='x'?(q[1]+pc[1])/2:pc[1]-12;out.push(lbl(mx,my,fmt(dd)+' m',{fs:12,c:GG,a:ax==='x'?'start':'middle',w:800}))}}}}}
  if(snapInfo&&cursor&&(draft||tool==='dim'||tool==='cal')){const q=P(cursor);if(snapInfo==='pt')out.push(`<rect x="${q[0]-8}" y="${q[1]-8}" width="16" height="16" fill="none" stroke="#16a34a" stroke-width="2.5"/>`);else if(snapInfo==='ang')out.push(`<path d="M${q[0]} ${q[1]-9}l9 9-9 9-9-9z" fill="none" stroke="#2563eb" stroke-width="2"/>`);else if(snapInfo==='seg')out.push(`<path d="M${q[0]-7} ${q[1]-7}l14 14m0-14-14 14" stroke="#16a34a" stroke-width="2.5"/>`)}
  return out.join('')}
 
@@ -582,7 +596,7 @@ function cancelPrim(){if(!prim)return;
 const MOVED=8;
 function onHover(pos){const w=S2W(...pos);
  if(DRAWT.includes(tool)||tool==='cal'){const prev=draft&&draft.pts.length?draft.pts[draft.pts.length-1]:calib&&calib.pts.length?calib.pts[0]:null;const r=snapPoint(w,prev);cursor=r.p;snapInfo=r.k;render()}
- else if(tool==='sym'){placePrev=placeSym(settings.d.sym.kind,w);if(!SYMS[settings.d.sym.kind].snap||placePrev.x===w[0]){const g=settings.snap?settings.grid:0;if(g){placePrev.x=Math.round(w[0]/g)*g;placePrev.y=Math.round(w[1]/g)*g}}render()}}
+ else if(tool==='sym'){placePrev=symTarget(settings.d.sym.kind,w,null);render()}}
 function onDown(e,pos){const w=S2W(...pos);prim={id:e.pointerId,sx:pos[0],sy:pos[1],lx:pos[0],ly:pos[1],moved:false,w0:w};
  if(tool==='sel'){
   const lh=labelHits.slice().reverse().find(h=>pos[0]>=h.x&&pos[0]<=h.x+h.w&&pos[1]>=h.y&&pos[1]<=h.y+h.h);
@@ -601,12 +615,28 @@ function onDown(e,pos){const w=S2W(...pos);prim={id:e.pointerId,sx:pos[0],sy:pos
  if(tool==='cal'){prim.mode='cal';return}
  if(tool==='bgmove'&&plan.bg){prim.mode='bg';prim.orig={x:plan.bg.x,y:plan.bg.y};return}
  prim.mode='pan'}
-function updPlace(w){placePrev=placeSym(settings.d.sym.kind,w);if(placePrev.x===w[0]&&placePrev.y===w[1]&&settings.snap){const g=settings.grid;placePrev.x=Math.round(w[0]/g)*g;placePrev.y=Math.round(w[1]/g)*g}render()}
+function updPlace(w){placePrev=symTarget(settings.d.sym.kind,w,null);render()}
+/* ---- Hilfslinien & Wandabstände ---- */
+function alignSnap(raw,selfId){if(!settings.guides)return{p:raw.slice()};const tol=12/view.s,C=[];
+ for(const it of plan.items){if(it.t!=='sym'||it.id===selfId||!vis(it)||isOpening(it.kind))continue;C.push({x:it.x,y:it.y,k:'sym'})}
+ for(const r of plan.items)if(r.t==='room'&&vis(r)&&inPoly(raw,r.pts)){const xs=r.pts.map(p=>p[0]),ys=r.pts.map(p=>p[1]),x0=Math.min(...xs),x1=Math.max(...xs),y0=Math.min(...ys),y1=Math.max(...ys);C.push({x:(x0+x1)/2,y:(y0+y1)/2,k:'mid',x0,x1,y0,y1})}
+ let ax=null,ay=null,dx=tol,dy=tol;for(const c of C){const a=Math.abs(c.x-raw[0]),b=Math.abs(c.y-raw[1]);if(a<dx||(a===dx&&c.k==='sym')){dx=a;ax=c}if(b<dy||(b===dy&&c.k==='sym')){dy=b;ay=c}}
+ return{p:[ax?ax.x:raw[0],ay?ay.y:raw[1]],ax,ay}}
+function symTarget(kind,raw,selfId){const al=alignSnap(raw,selfId),q=al.p,p=placeSym(kind,q),onWall=!(p.x===q[0]&&p.y===q[1]);
+ if(!onWall){const g=settings.snap?settings.grid:0;if(g){if(!al.ax)p.x=Math.round(q[0]/g)*g;if(!al.ay)p.y=Math.round(q[1]/g)*g}}
+ guideInfo=(al.ax||al.ay)?{ax:al.ax,ay:al.ay}:null;symTarget.onWall=onWall;return p}
+function wallFaces(){const F=[];for(const it of plan.items){if(!vis(it))continue;
+ if(it.t==='room'){const A=parea(it.pts),th=it.th||0;for(const[a,b]of segs(it)){F.push([a,b]);if(th){const n=nrm(a,b),sg=A>0?-th:th;F.push([[a[0]+n[0]*sg,a[1]+n[1]*sg],[b[0]+n[0]*sg,b[1]+n[1]*sg]])}}}
+ else if(it.t==='wall'){const h=(it.th||0)/2;for(const[a,b]of segs(it)){const n=nrm(a,b);F.push([[a[0]+n[0]*h,a[1]+n[1]*h],[b[0]+n[0]*h,b[1]+n[1]*h]],[[a[0]-n[0]*h,a[1]-n[1]*h],[b[0]-n[0]*h,b[1]-n[1]*h]])}}}return F}
+function rayHit(p,d,F){let best=Infinity;for(const[a,b]of F){const ex=b[0]-a[0],ey=b[1]-a[1],den=d[0]*ey-d[1]*ex;if(Math.abs(den)<1e-12)continue;const ax=a[0]-p[0],ay=a[1]-p[1],t=(ax*ey-ay*ex)/den,u=(ax*d[1]-ay*d[0])/den;if(t>1e-6&&u>=-1e-9&&u<=1+1e-9&&t<best)best=t}return best}
+const DIRS=[[1,0],[-1,0],[0,1],[0,-1]];
+function symDists(T){const F=wallFaces(),p=[T.x,T.y],r=(T.rot||0)*Math.PI/180,ly=[-Math.sin(r),Math.cos(r)],wallSym=(SYMS[T.kind]||{}).snap==='wall',skip=symR(T)+.03,out=[];
+ DIRS.forEach((d,i)=>{if(wallSym&&Math.abs(d[0]*ly[0]+d[1]*ly[1])>.7)return;const t=rayHit(p,d,F);if(!isFinite(t)||t<skip||t>40)return;out.push({i,d,t,hit:[p[0]+d[0]*t,p[1]+d[1]*t]})});return out}
 function onMove(e,pos){const w=S2W(...pos);if(!prim.moved&&Math.hypot(pos[0]-prim.sx,pos[1]-prim.sy)>MOVED)prim.moved=true;
  switch(prim.mode){
   case'pan':view.ox+=pos[0]-prim.lx;view.oy+=pos[1]-prim.ly;render();break;
   case'move':{if(!prim.moved)break;const it=byId(prim.orig.id);if(!it)break;const o=prim.orig;
-   if(it.t==='sym'){if(!prim.att){prim.att=attachedTo(o);prim.attOrig=prim.att.map(([c])=>clone(c))}const raw=[o.x+w[0]-prim.w0[0],o.y+w[1]-prim.w0[1]];const p=placeSym(it.kind,raw);if(p.x===raw[0]&&p.y===raw[1]){const g=settings.snap?settings.grid:0;it.x=g?Math.round(raw[0]/g)*g:raw[0];it.y=g?Math.round(raw[1]/g)*g:raw[1];it.rot=o.rot}else Object.assign(it,p);if(!('fy' in p))it.fy=o.fy;reattach(it,prim.att)}
+   if(it.t==='sym'){if(!prim.att){prim.att=attachedTo(o);prim.attOrig=prim.att.map(([c])=>clone(c))}const raw=[o.x+w[0]-prim.w0[0],o.y+w[1]-prim.w0[1]];const p=symTarget(it.kind,raw,it.id);if(!symTarget.onWall){it.x=p.x;it.y=p.y;it.rot=o.rot}else Object.assign(it,p);if(!('fy' in p))it.fy=o.fy;reattach(it,prim.att)}
    else if(it.t==='text'){const g=settings.snap?settings.grid:0,rx=o.x+w[0]-prim.w0[0],ry=o.y+w[1]-prim.w0[1];it.x=g?Math.round(rx/g)*g:rx;it.y=g?Math.round(ry/g)*g:ry}
    else{const t=[o.pts[0][0]+w[0]-prim.w0[0],o.pts[0][1]+w[1]-prim.w0[1]];const sp=snapPoint(t,null,it).p;const dx=sp[0]-o.pts[0][0],dy=sp[1]-o.pts[0][1];it.pts=o.pts.map(p=>[p[0]+dx,p[1]+dy])}
    render();refreshLive();break}
@@ -622,11 +652,12 @@ function onMove(e,pos){const w=S2W(...pos);if(!prim.moved&&Math.hypot(pos[0]-pri
   case'bg':plan.bg.x=prim.orig.x+w[0]-prim.w0[0];plan.bg.y=prim.orig.y+w[1]-prim.w0[1];render();break}
  prim.lx=pos[0];prim.ly=pos[1]}
 function startDraft(p){if(!draft)draft={t:tool,pts:[]};draft.pts.push(p);hideHint()}
-function onUp(e,pos){const w=S2W(...pos);
+function onUp(e,pos){const w=S2W(...pos);guideInfo=null;
  switch(prim.mode){
   case'pan':if(!prim.moved&&(sel||hiKey)){sel=null;hiKey=null;renderPanel();render()}break;
   case'label':if(!prim.moved){const h=prim.lh,it=byId(h.id);if(!it)break;sel=it.id;renderPanel();render();
    if(h.kind==='edge'){const[a,b]=segs(it)[h.i];askNumber('Wand '+(h.i+1)+' – Länge',`Neue Länge in Metern (jetzt ${fmt(dist(a,b))} m)`,fmtIn(Math.round(dist(a,b)*1000)/1000),v=>{setEdgeLength(it,h.i,v);commit();renderPanel()})}
+   else if(h.kind==='wd'){const D=symDists(it).find(x=>x.i===h.i);if(!D)break;askNumber('Abstand zur Wand',`Symbolmitte bis Wand (jetzt ${fmt(D.t)} m)`,fmtIn(Math.round(D.t*1000)/1000),v=>{const att=attachedTo(it);it.x=D.hit[0]-D.d[0]*v;it.y=D.hit[1]-D.d[1]*v;reattach(it,att);commit();renderPanel()})}
    else askNumber('Maß','Länge in Metern',fmtIn(dist(it.pts[0],it.pts[1])),v=>{setDimLength(it,v);commit();renderPanel()})}break;
   case'move':case'vertex':if(prim.moved){commit();renderPanel()}break;
   case'draw':{const prev=draft&&draft.pts.length?draft.pts[draft.pts.length-1]:null;const r=snapPoint(w,prev);const p=r.p;
@@ -704,7 +735,7 @@ $('#tools').innerHTML=TOOLS.map(([k,n])=>`<button class="tb" data-t="${k}"><svg 
 $('#tools').addEventListener('click',e=>{const b=e.target.closest('[data-t]');if(b)setTool(b.dataset.t)});
 const HINTS={sel:'Antippen = auswählen · ziehen = verschieben · Maßzahl antippen = Länge ändern · 2 Finger = zoomen',room:'Ecken antippen oder Linien ziehen · ersten Punkt antippen = schließen · oder Länge eingeben + Pfeil',wall:'Punkte antippen/ziehen · letzten Punkt nochmal antippen = fertig',sym:'Symbol wählen, dann im Plan antippen · rastet an Wänden automatisch ein',cable:'Leitungsweg antippen · fängt an Symbolen & Wänden · letzten Punkt nochmal = fertig',tray:'Trassenweg antippen · Typ & Maße rechts wählen · letzten Punkt nochmal = fertig',dim:'Anfangs- und Endpunkt antippen',text:'Stelle antippen, Text eingeben',cal:'Bekannte Strecke auf der Vorlage markieren',bgmove:'Vorlage verschieben'};
 let hintT=null;function showHint(t){const h=$('#hint');h.textContent=t;h.classList.remove('off');clearTimeout(hintT);hintT=setTimeout(hideHint,6500)}function hideHint(){$('#hint').classList.add('off')}
-function setTool(t){hiKey=null;if(draft&&draft.t!==t){const ok=draft.t==='room'?draft.pts.length>2:draft.pts.length>1;if(ok&&draft.t!=='dim')finishDraft(draft.t==='room');else cancelDraft()}
+function setTool(t){hiKey=null;guideInfo=null;if(draft&&draft.t!==t){const ok=draft.t==='room'?draft.pts.length>2:draft.pts.length>1;if(ok&&draft.t!=='dim')finishDraft(draft.t==='room');else cancelDraft()}
  if(t!=='cal')calib=null;tool=t;if(t!=='sel')sel=null;cursor=null;placePrev=null;panelHidden=false;
  document.querySelectorAll('.tb').forEach(b=>b.classList.toggle('on',b.dataset.t===t||(t==='cal'||t==='bgmove')&&b.dataset.t==='sel'));
  showHint(HINTS[t]||'');renderPanel();render()}
@@ -1028,7 +1059,7 @@ $('#fJson').onchange=()=>{const f=$('#fJson').files[0];$('#fJson').value='';if(!
 function setDialog(){const c=(k,l,v)=>`<label class="chk"><span>${l}</span><input type="checkbox" data-s="${k}" ${v?'checked':''}></label>`;
  dialog('Einstellungen',`<div class="sec" style="margin-top:0">Zeichnen</div>
  <label class="fld"><span>Raster / Fangschritt</span><select data-s="grid">${[[.01,'1 cm'],[.05,'5 cm'],[.1,'10 cm'],[.25,'25 cm'],[.5,'50 cm'],[1,'1 m']].map(([v,n])=>`<option value="${v}" ${settings.grid==v?'selected':''}>${n}</option>`).join('')}</select></label>
- ${c('snap','Am Raster fangen',settings.snap)}${c('angle','Winkel fangen (45°/90°)',settings.angle)}${c('penOnly','Stift-Modus: nur Stift zeichnet, Finger verschieben',settings.penOnly)}${c('showLen','Wandlängen anzeigen',settings.showLen)}
+ ${c('snap','Am Raster fangen',settings.snap)}${c('angle','Winkel fangen (45°/90°)',settings.angle)}${c('penOnly','Stift-Modus: nur Stift zeichnet, Finger verschieben',settings.penOnly)}${c('showLen','Wandlängen anzeigen',settings.showLen)}${c('guides','Wandabstände & Hilfslinien bei Symbolen',settings.guides)}
  <label class="fld"><span>Symbolgröße im Plan</span><select data-s="symSize">${[[.25,'klein (25 cm)'],[.4,'normal (40 cm)'],[.6,'groß (60 cm)'],[.9,'sehr groß (90 cm)']].map(([v,n])=>`<option value="${v}" ${settings.symSize==v?'selected':''}>${n}</option>`).join('')}</select></label>
  <div class="sec">Ebenen sichtbar</div>${c('lay.bau','Bau (Räume, Wände, Türen, Maße, Text)',settings.lay.bau)}${c('lay.elektro','Elektro (Symbole, Leitungen)',settings.lay.elektro)}${c('lay.trasse','Trassen / Kanäle / Rohre',settings.lay.trasse)}
  <p style="color:var(--mut);font-size:12px;margin-top:14px">Pläne werden nur auf diesem Gerät gespeichert. Über Export → Projektdatei kannst du sie sichern oder aufs andere Gerät holen.</p>`,[{t:'Fertig',cls:'pri'}]);
@@ -1043,6 +1074,8 @@ function hideEmptyTmp(){if(!emptyTmp&&$('#empty').classList.contains('on')){empt
 $('#empty').addEventListener('click',e=>{const b=e.target.closest('[data-e]');if(!b)return;emptyTmp=true;updEmpty();const a=b.dataset.e;if(a==='rect')roomRectDialog();else if(a==='draw')setTool('room');else bgDialog()});
 $('#bUndo').onclick=undo;$('#bRedo').onclick=redo;$('#bProj').onclick=openHome;$('#pname').onclick=()=>infoDialog(plan.id);$('#bBg').onclick=bgDialog;$('#bCalc').onclick=calcDialog;$('#bCirc').onclick=circDialog;$('#bExp').onclick=exportDialog;$('#bSet').onclick=setDialog;
 $('#zIn').onclick=()=>zoomAt(W/2,H/2,1.35);$('#zOut').onclick=()=>zoomAt(W/2,H/2,1/1.35);$('#zFit').onclick=fitView;
+function updGuideBtn(){$('#zGuide').classList.toggle('on',!!settings.guides)}updGuideBtn();
+$('#zGuide').onclick=()=>{settings.guides=!settings.guides;saveSettings();updGuideBtn();toast(settings.guides?'Wandabstände & Hilfslinien: an':'Wandabstände & Hilfslinien: aus');render()};
 window.addEventListener('keydown',e=>{if(modal.classList.contains('on')){if(e.key==='Escape')closeModal();return}if(home.classList.contains('on')){if(e.key==='Escape'&&plan.saved)closeHome();return}if(e.target.matches('input,textarea,select'))return;const k=e.key.toLowerCase();
  if((e.ctrlKey||e.metaKey)&&k==='z'){e.preventDefault();e.shiftKey?redo():undo();return}if((e.ctrlKey||e.metaKey)&&k==='y'){e.preventDefault();redo();return}
  if(e.key==='Escape'){if(draft)cancelDraft();else if(sel){sel=null;renderPanel();render()}else setTool('sel');return}
