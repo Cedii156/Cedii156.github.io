@@ -1,0 +1,25 @@
+{
+  "id": "./",
+  "name": "Trueline Plan",
+  "short_name": "TL Plan",
+  "description": "Raum- und Elektropläne schnell auf dem Tablet zeichnen: Räume mit Maßen, Leuchten, Steckdosen, Leitungen, Trassen, Materialauszug und PDF.",
+  "lang": "de",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0f1318",
+  "theme_color": "#151a21",
+  "categories": ["productivity", "utilities", "business"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ],
+  "screenshots": [
+    { "src": "screenshots/plan-wide.png", "sizes": "1280x800", "type": "image/png", "form_factor": "wide", "label": "Elektroplan mit Räumen, Leitungen und Trasse" },
+    { "src": "screenshots/plaene-narrow.png", "sizes": "540x1080", "type": "image/png", "form_factor": "narrow", "label": "Übersicht aller Pläne" }
+  ]
+}
