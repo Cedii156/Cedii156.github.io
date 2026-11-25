@@ -100,6 +100,7 @@ input[type=range]{padding:0;accent-color:var(--acc)}
 #toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%) translateY(20px);background:#222a35;color:#fff;border:1px solid var(--line);padding:10px 16px;border-radius:12px;font-size:14px;opacity:0;transition:.25s;pointer-events:none;z-index:60;max-width:90vw;text-align:center}
 #toast.on{opacity:1;transform:translateX(-50%)}
 #print{display:none}
+.xs{display:none}
 #home{position:fixed;inset:0;background:var(--bg);z-index:30;display:none;flex-direction:column}
 #home.on{display:flex}
 .hh{height:60px;display:flex;align-items:center;gap:8px;padding:0 14px;padding-left:max(14px,env(safe-area-inset-left));background:var(--bar);border-bottom:1px solid var(--line);flex:none}
@@ -127,6 +128,7 @@ input[type=range]{padding:0;accent-color:var(--acc)}
  .tb{min-width:60px}
  #panel{position:fixed;left:0;right:0;bottom:68px;width:auto;max-height:48vh;border-left:0;border-top:1px solid var(--line);border-radius:18px 18px 0 0;z-index:20;box-shadow:0 -10px 30px rgba(0,0,0,.3)}
  .hs{display:none!important}
+ .xs{display:inline}
  .ib{padding:0 6px;min-width:38px}
  #pname{padding:0 4px;font-size:15px}
  #drawbar{top:10px;bottom:auto}
@@ -194,7 +196,7 @@ input[type=range]{padding:0;accent-color:var(--acc)}
 <div id="home">
   <header class="hh"><div class="logo">Trueline <i>Plan</i></div><span id="hcount"></span><div style="flex:1"></div>
     <button class="ib" id="hImp" title="Projektdatei öffnen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3"/><path d="m7 10 5 5 5-5"/><path d="M5 14v5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-5"/></svg><span class="hs">Datei öffnen</span></button>
-    <button class="btn pri" id="hNew">+ Neu<span class="hs">er Plan</span></button>
+    <button class="btn pri" id="hNew"><span class="hs">+ Neuer Plan</span><span class="xs">+ Neu</span></button>
     <button class="ib" id="hClose" title="Zurück zum Plan">✕</button></header>
   <div class="hbar"><input id="hSearch" type="search" placeholder="Suchen: Name, Kunde, Adresse …" autocomplete="off">
     <div class="chips"><button class="chip" data-sort="date">Zuletzt bearbeitet</button><button class="chip" data-sort="name">Name</button><button class="chip" data-sort="kunde">Kunde</button></div></div>
